@@ -1,5 +1,11 @@
 defmodule PhoenixBench do
 
+  def connect_with_wait(coef, unit) do
+    connect(coef, unit)
+    loop
+  end
+  def loop, do: loop
+
   def connect(coef, unit), do: connect([], coef, unit)
   def connect(clients, coef, _) when coef <= 0, do: clients
   def connect(clients, coef, unit) do
