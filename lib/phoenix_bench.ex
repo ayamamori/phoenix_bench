@@ -1,5 +1,12 @@
 defmodule PhoenixBench do
 
+  def connect(n_client), do: connect([], n_client/100)
+  def connect(clients, n_client) when n_client <= 0, do: clients
+  def connect(clients, n_client) do
+    :timer.sleep(100)
+    connect(clients++ PhoenixBench.create_clients(100), n_client-1)
+  end
+
   def bench do
     chat_msgpack = Msgpax.pack!(%{topic: "rooms:lobby", event: "new_msg", ref: 2, payload: %{content: "aaa"}})|> IO.iodata_to_binary() 
     n_client = 1000
@@ -25,7 +32,7 @@ defmodule PhoenixBench do
   def join_channel(user_name, join_msgpack, receive_pid) do
     start_time = :os.system_time(:milli_seconds)
 
-    socket = Socket.Web.connect! "localhost", 4000, path: "/socket/websocket?user_name=#{user_name}"
+    socket = Socket.Web.connect! "104.155.218.66", 4000, path: "/socket/websocket?user_name=#{user_name}"
     socket |> (Socket.Web.send! {:binary, join_msgpack})
     socket |> Socket.Web.recv! |> elem(1) |> Msgpax.unpack! 
 
