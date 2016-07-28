@@ -1,10 +1,10 @@
 defmodule PhoenixBench do
 
-  def connect(n_client), do: connect([], n_client/100)
-  def connect(clients, n_client) when n_client <= 0, do: clients
-  def connect(clients, n_client) do
+  def connect(coef, unit), do: connect([], coef, unit)
+  def connect(clients, coef, _) when coef <= 0, do: clients
+  def connect(clients, coef, unit) do
     :timer.sleep(100)
-    connect(clients++ PhoenixBench.create_clients(100), n_client-1)
+    connect(clients ++ PhoenixBench.create_clients(unit), coef-1, unit)
   end
 
   def bench do
