@@ -1,44 +1,45 @@
 defmodule PhoenixBench do
 
-  def connect_with_wait(coef, unit) do
-    connect(coef, unit)
+  def connect_with_wait(coef, unit, host_name) do
+    connect(coef, unit, host_name)
     loop
   end
   def loop, do: loop
 
-  def connect(coef, unit), do: connect([], coef, unit)
-  def connect(clients, coef, _) when coef <= 0, do: clients
-  def connect(clients, coef, unit) do
+  def connect(coef, unit, host_name), do: connect([], coef, unit, host_name)
+  def connect(clients, coef, _, _) when coef <= 0, do: clients
+  def connect(clients, coef, unit, host_name) do
     :timer.sleep(100)
-    connect(clients ++ PhoenixBench.create_clients(unit), coef-1, unit)
+    connect(clients ++ PhoenixBench.create_clients(unit, host_name), coef-1, unit)
   end
 
   def bench do
     chat_msgpack = Msgpax.pack!(%{topic: "rooms:lobby", event: "new_msg", ref: 2, payload: %{content: "aaa"}})|> IO.iodata_to_binary() 
     n_client = 1000
-    [one_client | other_client] = create_clients(n_client)
+    host_name = ""
+    [one_client | other_client] = create_clients(n_client, host_name)
     #send one_client, {:send, chat_msgpack}
 
-    #clients= create_clients(n_client)
+    #clients= create_clients(host_name, n_client)
     #clients |> Enum.each(&(&1 |> send({:send, chat_msgpack})))
 
     #main_loop
 
   end
-  def create_clients(n_client) when n_client>=1 do
+  def create_clients(n_client, host_name) when n_client>=1 do
     join_msgpack = Msgpax.pack!(%{topic: "rooms:lobby", event: "phx_join", ref: 1, payload: nil})|> IO.iodata_to_binary() 
 
     receive_pid = spawn (fn -> receive_loop end)
     (for x <- 1..n_client, do: x)
       |> Enum.map(fn user_name -> 
-            spawn (fn -> join_channel(user_name, join_msgpack, receive_pid) end)
+            spawn (fn -> join_channel(host_name, user_name, join_msgpack, receive_pid) end)
          end)
   end
 
-  def join_channel(user_name, join_msgpack, receive_pid) do
+  def join_channel(host_name, user_name, join_msgpack, receive_pid) do
     start_time = :os.system_time(:milli_seconds)
 
-    socket = Socket.Web.connect! "104.155.218.66", 4000, path: "/socket/websocket?user_name=#{user_name}"
+    socket = Socket.Web.connect! host_name, 4000, path: "/socket/websocket?user_name=#{user_name}"
     socket |> (Socket.Web.send! {:binary, join_msgpack})
     socket |> Socket.Web.recv! |> elem(1) |> Msgpax.unpack! 
 
@@ -67,7 +68,7 @@ defmodule PhoenixBench do
 
   def receive_loop do
     receive do
-      {:receive, received} -> IO.puts :os.system_time(:milli_seconds) 
+      {:receive, received} -> IO.inspect received
     end
     receive_loop
   end
