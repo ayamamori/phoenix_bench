@@ -30,18 +30,18 @@ defmodule PhoenixBench do
   """
     Create clients with random (sequencial number) user_name
   """
-  def create_clients(n_client, host_name) when n_client>=1 do
+  def create_clients(n_client, host_name, channel \\ "rooms:lobby") when n_client>=1 do
     receive_pid = spawn (fn -> receive_loop end)
     (for x <- 1..n_client, do: x)
       |> Enum.map(fn user_name -> 
-            create_client(user_name, host_name, receive_pid)
+            create_client(user_name, host_name, channel, receive_pid)
          end)
   end
 
-  def create_client(user_name, host_name, nil) do
-    create_client(user_name, host_name, spawn (fn -> receive_loop end))
+  def create_client(user_name, host_name, channel \\ "rooms:lobby") when is_binary(channel) do
+    create_client(user_name, host_name, channel, (spawn (fn -> receive_loop end)))
   end
-  def create_client(user_name, host_name, receive_pid, channel \\ "rooms:lobby") do
+  defp create_client(user_name, host_name, channel, receive_pid) do
     join_msgpack = Msgpax.pack!(%{topic: "#{channel}", event: "phx_join", ref: 1, payload: nil})|> IO.iodata_to_binary() 
     spawn (fn -> join_channel(host_name, user_name, join_msgpack, receive_pid) end)
   end
