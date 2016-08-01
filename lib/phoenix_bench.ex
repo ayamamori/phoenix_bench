@@ -41,8 +41,8 @@ defmodule PhoenixBench do
   def create_client(user_name, host_name, nil) do
     create_client(user_name, host_name, spawn (fn -> receive_loop end))
   end
-  def create_client(user_name, host_name, receive_pid) do
-    join_msgpack = Msgpax.pack!(%{topic: "rooms:lobby", event: "phx_join", ref: 1, payload: nil})|> IO.iodata_to_binary() 
+  def create_client(user_name, host_name, receive_pid, channel \\ "rooms:lobby") do
+    join_msgpack = Msgpax.pack!(%{topic: "#{channel}", event: "phx_join", ref: 1, payload: nil})|> IO.iodata_to_binary() 
     spawn (fn -> join_channel(host_name, user_name, join_msgpack, receive_pid) end)
   end
 
@@ -78,7 +78,7 @@ defmodule PhoenixBench do
 
   def receive_loop do
     receive do
-      {:receive, received} -> IO.inspect received
+      {:receive, received} -> :nop #IO.inspect received
     end
     receive_loop
   end
