@@ -42,7 +42,14 @@ defmodule PhoenixBench do
     create_client(user_name, host_name, channel, (spawn (fn -> receive_loop end)))
   end
   defp create_client(user_name, host_name, channel, receive_pid) do
-    join_msgpack = Msgpax.pack!(%{topic: "#{channel}", event: "phx_join", ref: 1, payload: nil})|> IO.iodata_to_binary() 
+    join_msgpack = Msgpax.pack!(
+      %{
+        event: "phx_join", 
+        data: Msgpax.pack!(%{
+          topic: "#{channel}", 
+          ref: 1, payload: nil})
+         |> IO.iodata_to_binary()
+       }) |> IO.iodata_to_binary() 
     spawn (fn -> join_channel(host_name, user_name, join_msgpack, receive_pid) end)
   end
 
