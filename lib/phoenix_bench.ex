@@ -14,20 +14,27 @@ defmodule PhoenixBench do
   end
 
   def bench do
-    chat_msgpack = Msgpax.pack!(%{topic: "rooms:lobby", event: "new_msg", ref: 2, payload: %{content: "aaa"}})|> IO.iodata_to_binary() 
-    n_client = 1000
-    host_name = ""
+    chat_msgpack = Msgpax.pack!(%{
+      Event: "new_msg", 
+      Data: Msgpax.pack!(%{
+        Topic: "rooms:lobby", 
+        Ref: 2, 
+        Payload: %{Content: "aaa"}
+        })|> IO.iodata_to_binary()
+      })|> IO.iodata_to_binary() 
+    n_client = 10
+    host_name = "localhost"
     [one_client | other_client] = create_clients(n_client, host_name)
-    #send one_client, {:send, chat_msgpack}
+    send one_client, {:send, chat_msgpack}
 
     #clients= create_clients(host_name, n_client)
     #clients |> Enum.each(&(&1 |> send({:send, chat_msgpack})))
 
-    #main_loop
+    receive_loop
 
   end
-  @doc
-  """
+
+  @doc """
     Create clients with random (sequencial number) user_name
   """
   def create_clients(n_client, host_name, channel \\ "rooms:lobby") when n_client>=1 do
@@ -42,26 +49,23 @@ defmodule PhoenixBench do
     create_client(user_name, host_name, channel, (spawn (fn -> receive_loop end)))
   end
   defp create_client(user_name, host_name, channel, receive_pid) do
-    join_msgpack = Msgpax.pack!(
-      %{
-        event: "phx_join", 
-        data: Msgpax.pack!(%{
-          topic: "#{channel}", 
-          ref: 1, payload: nil})
-         |> IO.iodata_to_binary()
-       }) |> IO.iodata_to_binary() 
+    join_msgpack = Msgpax.pack!(%{
+        Event: "phx_join", 
+        Data: Msgpax.pack!(%{
+          Topic: "#{channel}", 
+          Ref: 1, 
+          Payload: nil
+          })|> IO.iodata_to_binary()
+        })|> IO.iodata_to_binary() 
     spawn (fn -> join_channel(host_name, user_name, join_msgpack, receive_pid) end)
   end
 
   def join_channel(host_name, user_name, join_msgpack, receive_pid) do
-    start_time = :os.system_time(:milli_seconds)
 
     socket = Socket.Web.connect! host_name, 4000, path: "/socket/websocket?user_name=#{user_name}"
     socket |> (Socket.Web.send! {:binary, join_msgpack})
     socket |> Socket.Web.recv! |> elem(1) |> Msgpax.unpack! 
 
-    end_time = :os.system_time(:milli_seconds)
-    IO.puts "Handshake time: #{(end_time - start_time)}[ms]"
     spawn fn -> recv_loop(socket, receive_pid) end
     send_loop(socket)
   end
@@ -79,13 +83,15 @@ defmodule PhoenixBench do
       |> Socket.Web.recv! 
       |> elem(1) 
       |> Msgpax.unpack! 
-    send receive_pid, {:receive, received}
+    event = received["Event"] |> IO.inspect
+    data = received["Data"] |> Msgpax.unpack!
+    send receive_pid, {:receive, %{Event: event, Data: data}}
     recv_loop(socket, receive_pid)
   end
 
   def receive_loop do
     receive do
-      {:receive, received} -> :nop #IO.inspect received
+      {:receive, received} -> IO.inspect received
     end
     receive_loop
   end
