@@ -29,7 +29,7 @@ defmodule PhoenixBench.Mixfile do
   defp deps do
     [
       {:socket, "~> 0.3.5"},
-      {:msgpax, "~> 0.8"},
+      {:msgpax, "~> 1.0"},
     ]
   end
 end

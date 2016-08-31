@@ -1,2 +1,2 @@
-%{"msgpax": {:hex, :msgpax, "0.8.2", "0e83d86e7cbf1bdcf7b870c25951df042ec19f9804a1a9c2fa59091a43ee2886", [:mix], []},
+%{"msgpax": {:hex, :msgpax, "1.0.0", "8135ba90c5560de753b63f7af1cf019a695d3e959ea564ea733634c95eaa037a", [:mix], [{:plug, "~> 1.0", [hex: :plug, optional: true]}]},
   "socket": {:hex, :socket, "0.3.5", "6c23772e7eda60f129f36dd69a61930aab18ae9b8d74d7f767c85355cf0b585d", [:mix], []}}
