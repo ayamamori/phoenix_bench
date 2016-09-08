@@ -15,24 +15,13 @@ defmodule PhoenixBench do
 
 
   def bench(host, n_clients, start_id \\ 0) do
-     {mega, seconds, us} = :os.timestamp()  
-     begin = (mega*1000000 + seconds)*1000000 + us
-     #clients=create_clients_seq(host, n_clients, start_id)
-     clients=create_clients(host, n_clients)
-     {mega, seconds, us} = :os.timestamp()  
-     IO.inspect (mega*1000000 + seconds)*1000000 + us - begin
-     #clients |> login
-     #{mega, seconds, us} = :os.timestamp()  
-     #IO.inspect (mega*1000000 + seconds)*1000000 + us - begin
-     #clients |> join
-     #{mega, seconds, us} = :os.timestamp()  
-     #IO.inspect (mega*1000000 + seconds)*1000000 + us - begin
-     clients
+     clients_pids=create_clients(host, n_clients)
   end
   
   def create_clients(host, n_clients, start_id \\ 0) do
     start_id..(n_clients+start_id-1)
       |> Enum.map(fn i -> 
+          Process.sleep(1)
           IO.inspect self
           spawn_link(fn -> create_client(i, host) end)
         end)
