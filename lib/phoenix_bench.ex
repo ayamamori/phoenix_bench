@@ -1,17 +1,17 @@
 defmodule PhoenixBench do
 
   @room "rooms:bench"
-  @login_msgpack Msgpax.pack!(%{Event: "login", Ref: 1}) |> IO.iodata_to_binary() 
-  @join_msgpack Msgpax.pack!(%{Event: "join", Topic: @room, Ref: 1}) |> IO.iodata_to_binary() 
-  @leave_msgpack Msgpax.pack!(%{Event: "leave", Topic: @room, Ref: 3}) |> IO.iodata_to_binary()
-  @say_msgpack Msgpax.pack!(%{Event: "say", Topic: @room, Ref: 2, Content: "aaa"}) |>IO.iodata_to_binary()
-  @members_msgpack Msgpax.pack!(%{Event: "members", Topic: @room, Ref: 2}) |>IO.iodata_to_binary()
-  @history_msgpack Msgpax.pack!(%{Event: "history", Topic: @room, Ref: 2, Limit: 20}) |>IO.iodata_to_binary()
-  @history_dm_msgpack Msgpax.pack!(%{Event: "history:dm", Topic: @room, Ref: 2, Limit: 20}) |>IO.iodata_to_binary()
-  @rooms_joined_msgpack Msgpax.pack!(%{Event: "rooms:joined", Ref: 3}) |>IO.iodata_to_binary()
-  @rooms_subscr_msgpack Msgpax.pack!(%{Event: "rooms:subscr", Ref: 3}) |>IO.iodata_to_binary()
-  @subscr_msgpack Msgpax.pack!(%{Event: "subscr", Ref: 3, Room: @room}) |>IO.iodata_to_binary()
-  @unsubscr_msgpack Msgpax.pack!(%{Event: "unsubscr", Ref: 3, Room: @room}) |>IO.iodata_to_binary()
+  @login %{Event: "login", Ref: 1} 
+  @join %{Event: "join", Topic: @room, Ref: 1} 
+  @leave %{Event: "leave", Topic: @room, Ref: 3}
+  @say %{Event: "say", Topic: @room, Ref: 2, Content: "aaa"}
+  @members %{Event: "members", Topic: @room, Ref: 2}
+  @history %{Event: "history", Topic: @room, Ref: 2, Limit: 20}
+  @history_dm %{Event: "history:dm", Topic: @room, Ref: 2, Limit: 20}
+  @rooms_joined %{Event: "rooms:joined", Ref: 3}
+  @rooms_subscr %{Event: "rooms:subscr", Ref: 3}
+  @subscr %{Event: "subscr", Ref: 3, Room: @room}
+  @unsubscr %{Event: "unsubscr", Ref: 3, Room: @room}
 
 
   def bench(host, n_clients, start_id \\ 0) do
@@ -21,8 +21,7 @@ defmodule PhoenixBench do
   def create_clients(host, n_clients, start_id \\ 0) do
     start_id..(n_clients+start_id-1)
       |> Enum.map(fn i -> 
-          Process.sleep(1)
-          if rem(i,1000)==0, do: IO.puts i
+          if rem(i,100)==0, do: IO.puts i
           spawn_link(fn -> create_client(i, host) end)
         end)
   end
@@ -89,37 +88,37 @@ defmodule PhoenixBench do
 
 
   def push_login(client) do
-    push(client, @login_msgpack)
+    push(client, @login |> Msgpax.pack!(iodata: false))
   end
   def push_join(client) do
-    push(client, @join_msgpack)
+    push(client, @join |> Msgpax.pack!(iodata: false))
   end
   def push_leave(client) do
-    push(client, @leave_msgpack)
+    push(client, @leave |> Msgpax.pack!(iodata: false))
   end
   def push_say(client) do
-    push(client, @say_msgpack)
+    push(client, @say |> Msgpax.pack!(iodata: false))
   end
   def push_members(client) do
-    push(client, @members_msgpack)
+    push(client, @members |> Msgpax.pack!(iodata: false))
   end
   def push_history(client) do
-    push(client, @history_msgpack)
+    push(client, @history |> Msgpax.pack!(iodata: false))
   end
   def push_history_dm(client) do
-    push(client, @history_dm_msgpack)
+    push(client, @history_dm |> Msgpax.pack!(iodata: false))
   end
   def push_rooms_joined(client) do
-    push(client, @rooms_joined_msgpack)
+    push(client, @rooms_joined |> Msgpax.pack!(iodata: false))
   end
   def push_rooms_subscr(client) do
-    push(client, @rooms_subscr_msgpack)
+    push(client, @rooms_subscr |> Msgpax.pack!(iodata: false))
   end
   def push_subscr(client) do
-    push(client, @subscr_msgpack)
+    push(client, @subscr |> Msgpax.pack!(iodata: false))
   end
   def push_unsubscr(client) do
-    push(client, @unsubscr_msgpack)
+    push(client, @unsubscr |> Msgpax.pack!(iodata: false))
   end
 
   def push(client, msgpack) do
