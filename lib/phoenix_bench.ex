@@ -1,77 +1,130 @@
 defmodule PhoenixBench do
 
-  def connect_with_wait(coef, unit, host_name) do
-    connect(coef, unit, host_name)
-    loop
+  @room "rooms:bench"
+  @login_msgpack Msgpax.pack!(%{Event: "login", Ref: 1}) |> IO.iodata_to_binary() 
+  @join_msgpack Msgpax.pack!(%{Event: "join", Topic: @room, Ref: 1}) |> IO.iodata_to_binary() 
+  @leave_msgpack Msgpax.pack!(%{Event: "leave", Topic: @room, Ref: 3}) |> IO.iodata_to_binary()
+  @say_msgpack Msgpax.pack!(%{Event: "say", Topic: @room, Ref: 2, Content: "aaa"}) |>IO.iodata_to_binary()
+  @members_msgpack Msgpax.pack!(%{Event: "members", Topic: @room, Ref: 2}) |>IO.iodata_to_binary()
+  @history_msgpack Msgpax.pack!(%{Event: "history", Topic: @room, Ref: 2, Limit: 20}) |>IO.iodata_to_binary()
+  @history_dm_msgpack Msgpax.pack!(%{Event: "history:dm", Topic: @room, Ref: 2, Limit: 20}) |>IO.iodata_to_binary()
+  @rooms_joined_msgpack Msgpax.pack!(%{Event: "rooms:joined", Ref: 3}) |>IO.iodata_to_binary()
+  @rooms_subscr_msgpack Msgpax.pack!(%{Event: "rooms:subscr", Ref: 3}) |>IO.iodata_to_binary()
+  @subscr_msgpack Msgpax.pack!(%{Event: "subscr", Ref: 3, Room: @room}) |>IO.iodata_to_binary()
+  @unsubscr_msgpack Msgpax.pack!(%{Event: "unsubscr", Ref: 3, Room: @room}) |>IO.iodata_to_binary()
+
+
+  def bench(host, n_clients, start_id \\ 0) do
+     clients_pids=create_clients(host, n_clients)
   end
-  def loop, do: loop
-
-  def connect(coef, unit, host_name), do: connect([], coef, unit, host_name)
-  def connect(clients, coef, _, _) when coef <= 0, do: clients
-  def connect(clients, coef, unit, host_name) do
-    :timer.sleep(100)
-    connect(clients ++ PhoenixBench.create_clients(unit, host_name), coef-1, unit)
-  end
-
-  def bench do
-    chat_msgpack = Msgpax.pack!(%{
-        Event: "msg:new", 
-        Topic: "rooms:lobby", 
-        Ref: 2, 
-        Content: "aaa",
-      })|> IO.iodata_to_binary() 
-    n_client = 1
-    host_name = "104.199.139.193"
-    #host_name = "localhost"
-    #[one_client | other_client] = create_clients(n_client, host_name)
-    #send one_client, {:send, chat_msgpack}
-
-    clients= create_clients(n_client, host_name)
-    clients |> Enum.each(&(&1 |> send({:send, chat_msgpack})))
-
-    receive_loop
-
+  
+  def create_clients(host, n_clients, start_id \\ 0) do
+    start_id..(n_clients+start_id-1)
+      |> Enum.map(fn i -> 
+          Process.sleep(1)
+          IO.inspect self
+          spawn_link(fn -> create_client(i, host) end)
+        end)
+      |> IO.inspect
   end
 
-  @doc """
-    Create clients with random (sequencial number) user_id
-  """
-  def create_clients(n_client, host_name, channel \\ "rooms:lobby") when n_client>=1 do
-    receive_pid = spawn (fn -> receive_loop end)
-    (for x <- 1..n_client, do: x)
-      |> Enum.map(fn user_id -> 
-            create_client(user_id, host_name, channel, receive_pid)
-         end)
+  defp create_client(i, host) do
+    client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{inspect i}&user_name=#{inspect i}"
+    receive_loop(client)
   end
 
-  def create_client(user_id, host_name, channel \\ "rooms:lobby") when is_binary(channel) do
-    create_client(user_id, host_name, channel, (spawn (fn -> receive_loop end)))
-  end
-  defp create_client(user_id, host_name, channel, receive_pid) do
-    join_msgpack = Msgpax.pack!(%{
-        Event: "phx_join", 
-        Topic: "#{channel}", 
-        Ref: 1, 
-      })|> IO.iodata_to_binary() 
-    spawn (fn -> join_channel(host_name, user_id, join_msgpack, receive_pid) end)
-  end
-
-  def join_channel(host_name, user_id, join_msgpack, receive_pid) do
-
-    socket = Socket.Web.connect! host_name, 4000, path: "/socket/websocket?user_id=#{user_id}&user_name=aaa"
-    socket |> (Socket.Web.send! {:binary, join_msgpack})
-    socket |> Socket.Web.recv! |> elem(1) |> Msgpax.unpack! 
-
-    spawn fn -> recv_loop(socket, receive_pid) end
-    send_loop(socket)
-  end
-
-  def send_loop(socket) do
+  def receive_loop(clients_pids) do
     receive do
-      {:send, msgpack} -> 
-        socket |> (Socket.Web.send! {:binary, msgpack})
+      :login -> push_login(clients_pids)
+      :join -> push_join(clients_pids)
+      :leave -> push_leave(clients_pids)
+      :say -> push_say(clients_pids)
+      :members -> push_members(clients_pids)
+      :history -> push_history(clients_pids)
+      :history_dm -> push_history_dm(clients_pids)
+      :rooms_joined -> push_rooms_joined(clients_pids)
+      :rooms_subscr -> push_rooms_subscr(clients_pids)
+      :subscr -> push_subscr(clients_pids)
+      :unsubscr -> push_unsubscr(clients_pids)
     end
-    send_loop(socket)
+    receive_loop(clients_pids)
+  end
+
+  def login(client_pids) do
+    send_client_op(client_pids, :login)
+  end
+  def join(client_pids) do
+    send_client_op(client_pids, :join)
+  end
+  def leave(client_pids) do
+    send_client_op(client_pids, :leave)
+  end
+  def say(client_pids) do
+    send_client_op(client_pids, :say)
+  end
+  def members(client_pids) do
+    send_client_op(client_pids, :members)
+  end
+  def history(client_pids) do
+    send_client_op(client_pids, :history)
+  end
+  def history_dm(client_pids) do
+    send_client_op(client_pids, :history_dm)
+  end
+  def rooms_joined(client_pids) do
+    send_client_op(client_pids, :rooms_joined)
+  end
+  def rooms_subscr(client_pids) do
+    send_client_op(client_pids, :rooms_subscr)
+  end
+  def subscr(client_pids) do
+    send_client_op(client_pids, :subscr)
+  end
+  def unsubscr(client_pids) do
+    send_client_op(client_pids, :unsubscr)
+  end
+
+  defp send_client_op(client_pids, op) do
+    client_pids |> Enum.each(fn pid -> send pid, op end)
+  end
+
+
+  def push_login(client) do
+    push(client, @login_msgpack)
+  end
+  def push_join(client) do
+    push(client, @join_msgpack)
+  end
+  def push_leave(client) do
+    push(client, @leave_msgpack)
+  end
+  def push_say(client) do
+    push(client, @say_msgpack)
+  end
+  def push_members(client) do
+    push(client, @members_msgpack)
+  end
+  def push_history(client) do
+    push(client, @history_msgpack)
+  end
+  def push_history_dm(client) do
+    push(client, @history_dm_msgpack)
+  end
+  def push_rooms_joined(client) do
+    push(client, @rooms_joined_msgpack)
+  end
+  def push_rooms_subscr(client) do
+    push(client, @rooms_subscr_msgpack)
+  end
+  def push_subscr(client) do
+    push(client, @subscr_msgpack)
+  end
+  def push_unsubscr(client) do
+    push(client, @unsubscr_msgpack)
+  end
+
+  def push(client, msgpack) do
+    client |> Socket.Web.send!({:binary, msgpack})
   end
 
   def recv_loop(socket, receive_pid) do
@@ -80,14 +133,8 @@ defmodule PhoenixBench do
       |> elem(1) 
       |> Msgpax.unpack! 
     send receive_pid, {:receive, received}
+    #IO.inspect received
     recv_loop(socket, receive_pid)
-  end
-
-  def receive_loop do
-    receive do
-      {:receive, received} -> IO.inspect received
-    end
-    receive_loop
   end
 
 end

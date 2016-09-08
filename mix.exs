@@ -30,6 +30,8 @@ defmodule PhoenixBench.Mixfile do
     [
       {:socket, "~> 0.3.5"},
       {:msgpax, "~> 1.0"},
+      {:timex, "~> 3.0"},
+      {:parallel_stream, "~> 1.0.5"},
     ]
   end
 end
