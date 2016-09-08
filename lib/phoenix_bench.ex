@@ -17,8 +17,8 @@ defmodule PhoenixBench do
   def bench(host, n_clients, start_id \\ 0) do
      {mega, seconds, us} = :os.timestamp()  
      begin = (mega*1000000 + seconds)*1000000 + us
-     clients=create_clients_seq(host, n_clients, start_id)
-     #clients=create_clients(host, n_clients)
+     #clients=create_clients_seq(host, n_clients, start_id)
+     clients=create_clients(host, n_clients)
      {mega, seconds, us} = :os.timestamp()  
      IO.inspect (mega*1000000 + seconds)*1000000 + us - begin
      #clients |> login
@@ -32,66 +32,110 @@ defmodule PhoenixBench do
   
   def create_clients(host, n_clients, start_id \\ 0) do
     start_id..(n_clients+start_id-1)
-      |> Enum.map(fn i -> Task.async(fn ->
-          create_client(i, host)
-        end)end)
-      |> Enum.map(&Task.await/1)
+      |> Enum.map(fn i -> 
+          IO.inspect self
+          spawn_link(fn -> create_client(i, host) end)
+        end)
       |> IO.inspect
-  end
-  def create_clients_seq(host, n_clients, start_id \\ 1) do
-    for i <- start_id..(n_clients+start_id) do
-      client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{inspect i}&user_name=#{inspect i}"
-      #spawn_link fn -> recv_loop(client, self) end
-      client
-    end
   end
 
   defp create_client(i, host) do
-    case Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{inspect i}&user_name=#{inspect i}" do
-      nil -> 
-      IO.inspect "nil!"
-      create_client(i, host)
-      client -> client
+    client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{inspect i}&user_name=#{inspect i}"
+    receive_loop(client)
+  end
+
+  def receive_loop(clients_pids) do
+    receive do
+      :login -> push_login(clients_pids)
+      :join -> push_join(clients_pids)
+      :leave -> push_leave(clients_pids)
+      :say -> push_say(clients_pids)
+      :members -> push_members(clients_pids)
+      :history -> push_history(clients_pids)
+      :history_dm -> push_history_dm(clients_pids)
+      :rooms_joined -> push_rooms_joined(clients_pids)
+      :rooms_subscr -> push_rooms_subscr(clients_pids)
+      :subscr -> push_subscr(clients_pids)
+      :unsubscr -> push_unsubscr(clients_pids)
     end
+    receive_loop(clients_pids)
   end
 
-  def login(clients) do
-    push(clients, @login_msgpack)
+  def login(client_pids) do
+    send_client_op(client_pids, :login)
   end
-  def join(clients) do
-    push(clients, @join_msgpack)
+  def join(client_pids) do
+    send_client_op(client_pids, :join)
   end
-  def leave(clients) do
-    push(clients, @leave_msgpack)
+  def leave(client_pids) do
+    send_client_op(client_pids, :leave)
   end
-  def say(clients) do
-    push(clients, @say_msgpack)
+  def say(client_pids) do
+    send_client_op(client_pids, :say)
   end
-  def members(clients) do
-    push(clients, @members_msgpack)
+  def members(client_pids) do
+    send_client_op(client_pids, :members)
   end
-  def history(clients) do
-    push(clients, @history_msgpack)
+  def history(client_pids) do
+    send_client_op(client_pids, :history)
   end
-  def history_dm(clients) do
-    push(clients, @history_dm_msgpack)
+  def history_dm(client_pids) do
+    send_client_op(client_pids, :history_dm)
   end
-  def rooms_joined(clients) do
-    push(clients, @rooms_joined_msgpack)
+  def rooms_joined(client_pids) do
+    send_client_op(client_pids, :rooms_joined)
   end
-  def rooms_subscr(clients) do
-    push(clients, @rooms_subscr_msgpack)
+  def rooms_subscr(client_pids) do
+    send_client_op(client_pids, :rooms_subscr)
   end
-  def subscr(clients) do
-    push(clients, @subscr_msgpack)
+  def subscr(client_pids) do
+    send_client_op(client_pids, :subscr)
   end
-  def unsubscr(clients) do
-    push(clients, @unsubscr_msgpack)
+  def unsubscr(client_pids) do
+    send_client_op(client_pids, :unsubscr)
   end
 
-  def push(clients, msgpack) do
-    Enum.each clients, &(&1 |> Socket.Web.send!({:binary, msgpack}))
-    clients
+  defp send_client_op(client_pids, op) do
+    client_pids |> Enum.each(fn pid -> send pid, op end)
+  end
+
+
+  def push_login(client) do
+    push(client, @login_msgpack)
+  end
+  def push_join(client) do
+    push(client, @join_msgpack)
+  end
+  def push_leave(client) do
+    push(client, @leave_msgpack)
+  end
+  def push_say(client) do
+    push(client, @say_msgpack)
+  end
+  def push_members(client) do
+    push(client, @members_msgpack)
+  end
+  def push_history(client) do
+    push(client, @history_msgpack)
+  end
+  def push_history_dm(client) do
+    push(client, @history_dm_msgpack)
+  end
+  def push_rooms_joined(client) do
+    push(client, @rooms_joined_msgpack)
+  end
+  def push_rooms_subscr(client) do
+    push(client, @rooms_subscr_msgpack)
+  end
+  def push_subscr(client) do
+    push(client, @subscr_msgpack)
+  end
+  def push_unsubscr(client) do
+    push(client, @unsubscr_msgpack)
+  end
+
+  def push(client, msgpack) do
+    client |> Socket.Web.send!({:binary, msgpack})
   end
 
   def recv_loop(socket, receive_pid) do
