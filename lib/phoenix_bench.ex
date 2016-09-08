@@ -28,58 +28,58 @@ defmodule PhoenixBench do
 
   defp create_client(i, host) do
     client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{inspect i}&user_name=#{inspect i}"
-    receive_loop(client)
+    receive_loop(i, client)
   end
 
-  def receive_loop(clients_pids) do
+  def receive_loop(i, client) do
     receive do
-      :login -> push_login(clients_pids)
-      :join -> push_join(clients_pids)
-      :leave -> push_leave(clients_pids)
-      :say -> push_say(clients_pids)
-      :members -> push_members(clients_pids)
-      :history -> push_history(clients_pids)
-      :history_dm -> push_history_dm(clients_pids)
-      :rooms_joined -> push_rooms_joined(clients_pids)
-      :rooms_subscr -> push_rooms_subscr(clients_pids)
-      :subscr -> push_subscr(clients_pids)
-      :unsubscr -> push_unsubscr(clients_pids)
+      :login -> push_login(i, client)
+      :join -> push_join(i, client)
+      :leave -> push_leave(i, client)
+      :say -> push_say(i, client)
+      :members -> push_members(i, client)
+      :history -> push_history(i, client)
+      :history_dm -> push_history_dm(i, client)
+      :rooms_joined -> push_rooms_joined(i, client)
+      :rooms_subscr -> push_rooms_subscr(i, client)
+      :subscr -> push_subscr(i, client)
+      :unsubscr -> push_unsubscr(i, client)
     end
-    receive_loop(clients_pids)
+    receive_loop(i, client)
   end
 
-  def login(client_pids) do
-    send_client_op(client_pids, :login)
+  def login(client_pid) do
+    send_client_op(client_pid, :login)
   end
-  def join(client_pids) do
-    send_client_op(client_pids, :join)
+  def join(client_pid) do
+    send_client_op(client_pid, :join)
   end
-  def leave(client_pids) do
-    send_client_op(client_pids, :leave)
+  def leave(client_pid) do
+    send_client_op(client_pid, :leave)
   end
-  def say(client_pids) do
-    send_client_op(client_pids, :say)
+  def say(client_pid) do
+    send_client_op(client_pid, :say)
   end
-  def members(client_pids) do
-    send_client_op(client_pids, :members)
+  def members(client_pid) do
+    send_client_op(client_pid, :members)
   end
-  def history(client_pids) do
-    send_client_op(client_pids, :history)
+  def history(client_pid) do
+    send_client_op(client_pid, :history)
   end
-  def history_dm(client_pids) do
-    send_client_op(client_pids, :history_dm)
+  def history_dm(client_pid) do
+    send_client_op(client_pid, :history_dm)
   end
-  def rooms_joined(client_pids) do
-    send_client_op(client_pids, :rooms_joined)
+  def rooms_joined(client_pid) do
+    send_client_op(client_pid, :rooms_joined)
   end
-  def rooms_subscr(client_pids) do
-    send_client_op(client_pids, :rooms_subscr)
+  def rooms_subscr(client_pid) do
+    send_client_op(client_pid, :rooms_subscr)
   end
-  def subscr(client_pids) do
-    send_client_op(client_pids, :subscr)
+  def subscr(client_pid) do
+    send_client_op(client_pid, :subscr)
   end
-  def unsubscr(client_pids) do
-    send_client_op(client_pids, :unsubscr)
+  def unsubscr(client_pid) do
+    send_client_op(client_pid, :unsubscr)
   end
 
   defp send_client_op(client_pids, op) do
@@ -87,42 +87,46 @@ defmodule PhoenixBench do
   end
 
 
-  def push_login(client) do
-    push(client, @login |> Msgpax.pack!(iodata: false))
+  def push_login(i, client) do
+    push(client, @login)
   end
-  def push_join(client) do
-    push(client, @join |> Msgpax.pack!(iodata: false))
+  def push_join(i, client) do
+    push_topic(client, @join, i)
   end
-  def push_leave(client) do
-    push(client, @leave |> Msgpax.pack!(iodata: false))
+  def push_leave(i, client) do
+    push_topic(client, @leave, i)
   end
-  def push_say(client) do
-    push(client, @say |> Msgpax.pack!(iodata: false))
+  def push_say(i, client) do
+    push_topic(client, @say, i)
   end
-  def push_members(client) do
-    push(client, @members |> Msgpax.pack!(iodata: false))
+  def push_members(i, client) do
+    push_topic(client, @members, i)
   end
-  def push_history(client) do
-    push(client, @history |> Msgpax.pack!(iodata: false))
+  def push_history(i, client) do
+    push_topic(client, @history, i)
   end
-  def push_history_dm(client) do
-    push(client, @history_dm |> Msgpax.pack!(iodata: false))
+  def push_history_dm(i, client) do
+    push_topic(client, @history_dm, i)
   end
-  def push_rooms_joined(client) do
-    push(client, @rooms_joined |> Msgpax.pack!(iodata: false))
+  def push_rooms_joined(i, client) do
+    push_topic(client, @rooms_joined, i)
   end
-  def push_rooms_subscr(client) do
-    push(client, @rooms_subscr |> Msgpax.pack!(iodata: false))
+  def push_rooms_subscr(i, client) do
+    push(client, @rooms_subscr)
   end
-  def push_subscr(client) do
-    push(client, @subscr |> Msgpax.pack!(iodata: false))
+  def push_subscr(i, client) do
+    push(client, @subscr)
   end
-  def push_unsubscr(client) do
-    push(client, @unsubscr |> Msgpax.pack!(iodata: false))
+  def push_unsubscr(i, client) do
+    push(client, @unsubscr)
   end
 
-  def push(client, msgpack) do
-    client |> Socket.Web.send!({:binary, msgpack})
+  def push_topic(client, param, user_id) do
+    param = param |> Map.put(:Topic, @room<>Integer.to_string(user_id))
+    push(client, param)
+  end
+  def push(client, param) do
+    client |> Socket.Web.send!({:binary, param |> Msgpax.pack!(iodata: false)})
   end
 
   def recv_loop(socket, receive_pid) do
