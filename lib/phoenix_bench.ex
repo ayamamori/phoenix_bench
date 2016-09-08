@@ -22,10 +22,9 @@ defmodule PhoenixBench do
     start_id..(n_clients+start_id-1)
       |> Enum.map(fn i -> 
           Process.sleep(1)
-          IO.inspect self
+          if rem(i,1000)==0, do: IO.puts i
           spawn_link(fn -> create_client(i, host) end)
         end)
-      |> IO.inspect
   end
 
   defp create_client(i, host) do
