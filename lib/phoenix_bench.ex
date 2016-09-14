@@ -140,8 +140,8 @@ defmodule PhoenixBench do
       |> elem(1) 
       |> Msgpax.unpack! 
     case received["Event"] do
-      event -> :ok
-      "push:"<>event -> :ok
+      ^event -> :ok
+      "push:"<>^event -> :ok
       _ -> wait_recv(socket, event)
     end
   end
