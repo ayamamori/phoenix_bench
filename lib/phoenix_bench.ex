@@ -126,7 +126,24 @@ defmodule PhoenixBench do
     push(client, param)
   end
   def push(client, param) do
+    start = DateTime.utc_now 
     client |> Socket.Web.send!({:binary, param |> Msgpax.pack!(iodata: false)})
+    wait_recv(client, param[:Event])
+    finish = DateTime.utc_now 
+    api_time = (finish |> DateTime.to_unix(:milliseconds)) - (start |> DateTime.to_unix(:milliseconds))
+
+    IO.puts "#{api_time |> Integer.to_string} [ms]"
+  end
+  def wait_recv(socket, event) do
+    received = socket 
+      |> Socket.Web.recv! 
+      |> elem(1) 
+      |> Msgpax.unpack! 
+    case received["Event"] do
+      event -> :ok
+      "push:"<>event -> :ok
+      _ -> wait_recv(socket, event)
+    end
   end
 
   def recv_loop(socket, receive_pid) do
