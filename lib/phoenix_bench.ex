@@ -15,7 +15,7 @@ defmodule PhoenixBench do
 
 
   def bench(host, n_clients, start_id \\ 0) do
-     clients_pids=create_clients(host, n_clients)
+     clients_pids=create_clients(host, n_clients, start_id)
   end
   
   def create_clients(host, n_clients, start_id \\ 0) do
