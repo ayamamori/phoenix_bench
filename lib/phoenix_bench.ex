@@ -27,7 +27,11 @@ defmodule PhoenixBench do
   end
 
   defp create_client(i, host) do
+    start = DateTime.utc_now 
     client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{inspect i}&user_name=#{inspect i}"
+    finish = DateTime.utc_now 
+    api_time = (finish |> DateTime.to_unix(:milliseconds)) - (start |> DateTime.to_unix(:milliseconds))
+    IO.puts "#{api_time |> Integer.to_string} [ms]"
     receive_loop(i, client)
   end
 
@@ -87,7 +91,7 @@ defmodule PhoenixBench do
   end
 
 
-  def push_login(i, client) do
+  def push_login(_i, client) do
     push(client, @login)
   end
   def push_join(i, client) do
@@ -111,13 +115,13 @@ defmodule PhoenixBench do
   def push_rooms_joined(i, client) do
     push_topic(client, @rooms_joined, i)
   end
-  def push_rooms_subscr(i, client) do
+  def push_rooms_subscr(_i, client) do
     push(client, @rooms_subscr)
   end
-  def push_subscr(i, client) do
+  def push_subscr(_i, client) do
     push(client, @subscr)
   end
-  def push_unsubscr(i, client) do
+  def push_unsubscr(_i, client) do
     push(client, @unsubscr)
   end
 
