@@ -1,17 +1,17 @@
 defmodule PhoenixBench do
 
   @room "rooms:bench"
-  @login %{Event: "login", Ref: 1} 
-  @join %{Event: "join", Topic: @room, Ref: 1} 
-  @leave %{Event: "leave", Topic: @room, Ref: 3}
-  @say %{Event: "say", Topic: @room, Ref: 2, Content: "aaa"}
-  @members %{Event: "members", Topic: @room, Ref: 2}
-  @history %{Event: "history", Topic: @room, Ref: 2, Limit: 20}
-  @history_dm %{Event: "history:dm", Topic: @room, Ref: 2, Limit: 20}
-  @rooms_joined %{Event: "rooms:joined", Ref: 3}
-  @rooms_subscr %{Event: "rooms:subscr", Ref: 3}
-  @subscr %{Event: "subscr", Ref: 3, Room: @room}
-  @unsubscr %{Event: "unsubscr", Ref: 3, Room: @room}
+  @login [%{Event: "login", Ref: 1}] 
+  @join [%{Event: "join", Topic: @room, Ref: 1}] 
+  @leave [%{Event: "leave", Topic: @room, Ref: 3}]
+  @say [%{Event: "say", Topic: @room, Ref: 2, Content: "aaa"}]
+  @members [%{Event: "members", Topic: @room, Ref: 2}]
+  @history [%{Event: "history", Topic: @room, Ref: 2, Limit: 20}]
+  @history_dm [%{Event: "history:dm", Topic: @room, Ref: 2, Limit: 20}]
+  @rooms_joined [%{Event: "rooms:joined", Ref: 3}]
+  @rooms_subscr [%{Event: "rooms:subscr", Ref: 3}]
+  @subscr [%{Event: "subscr", Ref: 3, Room: @room}]
+  @unsubscr [%{Event: "unsubscr", Ref: 3, Room: @room}]
 
 
   def bench(host, n_clients, start_id \\ 0) do
@@ -122,13 +122,13 @@ defmodule PhoenixBench do
   end
 
   def push_topic(client, param, user_id) do
-    param = param |> Map.put(:Topic, @room<>Integer.to_string(user_id))
+    param = [param |> List.first |> Map.put(:Topic, @room<>Integer.to_string(user_id))]
     push(client, param)
   end
   def push(client, param) do
     start = DateTime.utc_now 
     client |> Socket.Web.send!({:binary, param |> Msgpax.pack!(iodata: false)})
-    wait_recv(client, param[:Event])
+    wait_recv(client, param |> List.first |> Map.get(:Event))
     finish = DateTime.utc_now 
     api_time = (finish |> DateTime.to_unix(:milliseconds)) - (start |> DateTime.to_unix(:milliseconds))
 
@@ -139,6 +139,7 @@ defmodule PhoenixBench do
       |> Socket.Web.recv! 
       |> elem(1) 
       |> Msgpax.unpack! 
+      |> List.first
     case received["Event"] do
       ^event -> :ok
       "push:"<>^event -> :ok
