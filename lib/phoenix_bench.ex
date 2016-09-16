@@ -10,6 +10,7 @@ defmodule PhoenixBench do
   @history_dm [%{Event: "history:dm", Topic: @room, Ref: 2, Limit: 20}]
   @rooms_joined [%{Event: "rooms:joined", Ref: 3}]
   @rooms_subscr [%{Event: "rooms:subscr", Ref: 3}]
+  @rooms_all [%{Event: "rooms:all", Ref: 3}]
   @subscr [%{Event: "subscr", Ref: 3, Room: @room}]
   @unsubscr [%{Event: "unsubscr", Ref: 3, Room: @room}]
 
@@ -46,6 +47,7 @@ defmodule PhoenixBench do
       :history_dm -> push_history_dm(i, client)
       :rooms_joined -> push_rooms_joined(i, client)
       :rooms_subscr -> push_rooms_subscr(i, client)
+      :rooms_all -> push_rooms_all(i, client)
       :subscr -> push_subscr(i, client)
       :unsubscr -> push_unsubscr(i, client)
     end
@@ -78,6 +80,9 @@ defmodule PhoenixBench do
   end
   def rooms_subscr(client_pid) do
     send_client_op(client_pid, :rooms_subscr)
+  end
+  def rooms_all(client_pid) do
+    send_client_op(client_pid, :rooms_all)
   end
   def subscr(client_pid) do
     send_client_op(client_pid, :subscr)
@@ -117,6 +122,9 @@ defmodule PhoenixBench do
   end
   def push_rooms_subscr(_i, client) do
     push(client, @rooms_subscr)
+  end
+  def push_rooms_all(_i, client) do
+    push(client, @rooms_all)
   end
   def push_subscr(_i, client) do
     push(client, @subscr)
