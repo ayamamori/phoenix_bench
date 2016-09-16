@@ -146,7 +146,8 @@ defmodule PhoenixBench do
       |> List.first
     case received["Event"] do
       ^event -> :ok
-      "push:"<>^event -> :ok
+      "push:say"-> if event == "say" do :ok else wait_recv(socket, event) end
+      "phx_close"-> if event == "leave" do :ok else wait_recv(socket, event) end
       _ -> wait_recv(socket, event)
     end
   end
