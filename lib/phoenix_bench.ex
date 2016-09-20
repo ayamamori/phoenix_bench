@@ -36,22 +36,22 @@ defmodule PhoenixBench do
     receive_loop(i, client)
   end
 
-  def receive_loop(i, client) do
+  def receive_loop(user_id, client) do
     receive do
-      :login -> push_login(i, client)
-      :join -> push_join(i, client)
-      :leave -> push_leave(i, client)
-      :say -> push_say(i, client)
-      :members -> push_members(i, client)
-      :history -> push_history(i, client)
-      :history_dm -> push_history_dm(i, client)
-      :rooms_joined -> push_rooms_joined(i, client)
-      :rooms_subscr -> push_rooms_subscr(i, client)
-      :rooms_all -> push_rooms_all(i, client)
-      :subscr -> push_subscr(i, client)
-      :unsubscr -> push_unsubscr(i, client)
+      :login -> push_login(user_id, client)
+      :join -> push_join(user_id, client)
+      :leave -> push_leave(user_id, client)
+      :say -> push_say(user_id, client)
+      :members -> push_members(user_id, client)
+      :history -> push_history(user_id, client)
+      :history_dm -> push_history_dm(user_id, client)
+      :rooms_joined -> push_rooms_joined(user_id, client)
+      :rooms_subscr -> push_rooms_subscr(user_id, client)
+      :rooms_all -> push_rooms_all(user_id, client)
+      :subscr -> push_subscr(user_id, client)
+      :unsubscr -> push_unsubscr(user_id, client)
     end
-    receive_loop(i, client)
+    receive_loop(user_id, client)
   end
 
   def login(client_pid) do
@@ -96,57 +96,57 @@ defmodule PhoenixBench do
   end
 
 
-  def push_login(_i, client) do
-    push(client, @login)
+  def push_login(user_id, client) do
+    push(client, @login, user_id)
   end
-  def push_join(i, client) do
-    push_topic(client, @join, i)
+  def push_join(user_id, client) do
+    push_topic(client, @join, user_id)
   end
-  def push_leave(i, client) do
-    push_topic(client, @leave, i)
+  def push_leave(user_id, client) do
+    push_topic(client, @leave, user_id)
   end
-  def push_say(i, client) do
-    push_topic(client, @say, i)
+  def push_say(user_id, client) do
+    push_topic(client, @say, user_id)
   end
-  def push_members(i, client) do
-    push_topic(client, @members, i)
+  def push_members(user_id, client) do
+    push_topic(client, @members, user_id)
   end
-  def push_history(i, client) do
-    push_topic(client, @history, i)
+  def push_history(user_id, client) do
+    push_topic(client, @history, user_id)
   end
-  def push_history_dm(i, client) do
-    push_topic(client, @history_dm, i)
+  def push_history_dm(user_id, client) do
+    push_topic(client, @history_dm, user_id)
   end
-  def push_rooms_joined(i, client) do
-    push_topic(client, @rooms_joined, i)
+  def push_rooms_joined(user_id, client) do
+    push_topic(client, @rooms_joined, user_id)
   end
-  def push_rooms_subscr(_i, client) do
-    push(client, @rooms_subscr)
+  def push_rooms_subscr(user_id, client) do
+    push(client, @rooms_subscr, user_id)
   end
-  def push_rooms_all(_i, client) do
-    push(client, @rooms_all)
+  def push_rooms_all(user_id, client) do
+    push(client, @rooms_all, user_id)
   end
-  def push_subscr(_i, client) do
-    push(client, @subscr)
+  def push_subscr(user_id, client) do
+    push(client, @subscr, user_id)
   end
-  def push_unsubscr(_i, client) do
-    push(client, @unsubscr)
+  def push_unsubscr(user_id, client) do
+    push(client, @unsubscr, user_id)
   end
 
   def push_topic(client, param, user_id) do
     param = [param |> List.first |> Map.put(:Topic, @room<>Integer.to_string(user_id))]
-    push(client, param)
+    push(client, param, user_id)
   end
-  def push(client, param) do
+  def push(client, param, user_id) do
     start = DateTime.utc_now 
     client |> Socket.Web.send!({:binary, param |> Msgpax.pack!(iodata: false)})
-    wait_recv(client, param |> List.first |> Map.get(:Event))
+    wait_recv(client, param |> List.first |> Map.get(:Event), user_id)
     finish = DateTime.utc_now 
     api_time = (finish |> DateTime.to_unix(:milliseconds)) - (start |> DateTime.to_unix(:milliseconds))
 
     IO.puts "#{api_time |> Integer.to_string} [ms]"
   end
-  def wait_recv(socket, event) do
+  def wait_recv(socket, event, user_id) do
     received = socket 
       |> Socket.Web.recv! 
       |> elem(1) 
@@ -154,9 +154,10 @@ defmodule PhoenixBench do
       |> List.first
     case received["Event"] do
       ^event -> :ok
-      "push:say"-> if event == "say" do :ok else wait_recv(socket, event) end
-      "phx_close"-> if event == "leave" do :ok else wait_recv(socket, event) end
-      _ -> wait_recv(socket, event)
+      "push:say"-> 
+        if event == "say" and received["UserId"] == user_id do :ok else wait_recv(socket, event, user_id) end
+      "phx_close"-> if event == "leave" do :ok else wait_recv(socket, event, user_id) end
+      _ -> wait_recv(socket, event, user_id)
     end
   end
 
