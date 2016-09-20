@@ -134,7 +134,7 @@ defmodule PhoenixBench do
   end
 
   def push_topic(client, param, user_id) do
-    param = [param |> List.first |> Map.put(:Topic, @room<>Integer.to_string(user_id))]
+    param = [param |> List.first |> Map.put(:Topic, @room<>Integer.to_string(div(user_id,20)))]
     push(client, param, user_id)
   end
   def push(client, param, user_id) do
