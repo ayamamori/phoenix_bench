@@ -29,11 +29,12 @@ defmodule PhoenixBench do
 
   defp create_client(i, host) do
     start = DateTime.utc_now 
-    client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{inspect i}&user_name=#{inspect i}"
+    user_id = inspect i
+    client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{user_id}&user_name=#{user_id}"
     finish = DateTime.utc_now 
     api_time = (finish |> DateTime.to_unix(:milliseconds)) - (start |> DateTime.to_unix(:milliseconds))
     IO.puts "#{api_time |> Integer.to_string} [ms]"
-    receive_loop(i, client)
+    receive_loop(user_id, client)
   end
 
   def receive_loop(user_id, client) do
