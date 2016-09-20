@@ -27,10 +27,9 @@ defmodule PhoenixBench do
         end)
   end
 
-  defp create_client(i, host) do
+  defp create_client(user_id, host) do
     start = DateTime.utc_now 
-    user_id = inspect i
-    client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{user_id}&user_name=#{user_id}"
+    client = Socket.Web.connect! host, 4000, path: "/socket/websocket?user_id=#{Integer.to_string(user_id)}&user_name=#{Integer.to_string(user_id)}"
     finish = DateTime.utc_now 
     api_time = (finish |> DateTime.to_unix(:milliseconds)) - (start |> DateTime.to_unix(:milliseconds))
     IO.puts "#{api_time |> Integer.to_string} [ms]"
@@ -156,7 +155,7 @@ defmodule PhoenixBench do
     case received["Event"] do
       ^event -> :ok
       "push:say"-> 
-        if event == "say" and received["UserId"] == user_id do :ok else wait_recv(socket, event, user_id) end
+        if event == "say" and received["UserId"] == Integer.to_string(user_id) do :ok else wait_recv(socket, event, user_id) end
       "phx_close"-> if event == "leave" do :ok else wait_recv(socket, event, user_id) end
       _ -> wait_recv(socket, event, user_id)
     end
